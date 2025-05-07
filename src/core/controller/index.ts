@@ -1755,9 +1755,21 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 		const localClineRulesToggles =
 			((await getWorkspaceState(this.context, "localClineRulesToggles")) as ClineRulesToggles) || {}
 
+		// Get live model info from the active task's API handler, if available
+		const liveModelInfo = this.task?.api?.getModel()?.info
+
+		// Merge live model info into the apiConfiguration for the state update
+		const finalApiConfiguration = { ...apiConfiguration }
+		if (liveModelInfo) {
+			if (apiConfiguration.apiProvider === "litellm" && liveModelInfo) {
+				// Add the live model info specifically for LiteLLM under a dedicated key
+				;(finalApiConfiguration as any).liteLlmModelInfo = liveModelInfo
+			}
+		}
+
 		return {
 			version: this.context.extension?.packageJSON?.version ?? "",
-			apiConfiguration,
+			apiConfiguration: finalApiConfiguration, // Use the potentially updated config
 			customInstructions,
 			uriScheme: vscode.env.uriScheme,
 			currentTaskItem: this.task?.taskId ? (taskHistory || []).find((item) => item.id === this.task?.taskId) : undefined,
