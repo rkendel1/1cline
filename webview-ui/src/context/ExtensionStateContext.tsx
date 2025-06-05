@@ -50,6 +50,7 @@ interface ExtensionStateContextType extends ExtensionState {
 	setShouldShowAnnouncement: (value: boolean) => void
 	setPlanActSeparateModelsSetting: (value: boolean) => void
 	setEnableCheckpointsSetting: (value: boolean) => void
+	setEnableDebuggerSetting: (value: boolean) => void
 	setMcpMarketplaceEnabled: (value: boolean) => void
 	setShellIntegrationTimeout: (value: number) => void
 	setTerminalReuseEnabled: (value: boolean) => void
@@ -169,6 +170,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		distinctId: "",
 		planActSeparateModelsSetting: true,
 		enableCheckpointsSetting: true,
+		enableDebuggerSetting: false,
 		globalClineRulesToggles: {},
 		localClineRulesToggles: {},
 		localCursorRulesToggles: {},
@@ -556,6 +558,7 @@ export const ExtensionStateContextProvider: React.FC<{
 		localWorkflowToggles: state.localWorkflowToggles || {},
 		globalWorkflowToggles: state.globalWorkflowToggles || {},
 		enableCheckpointsSetting: state.enableCheckpointsSetting,
+		enableDebuggerSetting: state.enableDebuggerSetting,
 
 		// Navigation functions
 		navigateToMcp,
@@ -593,6 +596,11 @@ export const ExtensionStateContextProvider: React.FC<{
 			setState((prevState) => ({
 				...prevState,
 				enableCheckpointsSetting: value,
+			})),
+		setEnableDebuggerSetting: (value) =>
+			setState((prevState) => ({
+				...prevState,
+				enableDebuggerSetting: value,
 			})),
 		setMcpMarketplaceEnabled: (value) =>
 			setState((prevState) => ({
@@ -632,6 +640,7 @@ export const ExtensionStateContextProvider: React.FC<{
 				telemetrySetting: state.telemetrySetting,
 				planActSeparateModelsSetting: state.planActSeparateModelsSetting,
 				enableCheckpointsSetting: state.enableCheckpointsSetting,
+				enableDebuggerSetting: state.enableDebuggerSetting,
 				mcpMarketplaceEnabled: state.mcpMarketplaceEnabled,
 			})
 		},
