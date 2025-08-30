@@ -1,4 +1,5 @@
 import { Anthropic } from "@anthropic-ai/sdk"
+import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity"
 import { azureOpenAiDefaultApiVersion, ModelInfo, OpenAiCompatibleModelInfo, openAiModelInfoSaneDefaults } from "@shared/api"
 import OpenAI, { AzureOpenAI } from "openai"
 import type { ChatCompletionReasoningEffort } from "openai/resources/chat/completions"
@@ -12,6 +13,7 @@ interface OpenAiHandlerOptions extends CommonApiHandlerOptions {
 	openAiApiKey?: string
 	openAiBaseUrl?: string
 	azureApiVersion?: string
+	azureIdentity?: boolean
 	openAiHeaders?: Record<string, string>
 	openAiModelId?: string
 	openAiModelInfo?: OpenAiCompatibleModelInfo
@@ -40,12 +42,24 @@ export class OpenAiHandler implements ApiHandler {
 						this.options.openAiBaseUrl?.toLowerCase().includes("azure.us")) &&
 						!this.options.openAiModelId?.toLowerCase().includes("deepseek"))
 				) {
-					this.client = new AzureOpenAI({
-						baseURL: this.options.openAiBaseUrl,
-						apiKey: this.options.openAiApiKey,
-						apiVersion: this.options.azureApiVersion || azureOpenAiDefaultApiVersion,
-						defaultHeaders: this.options.openAiHeaders,
-					})
+					if (this.options.azureIdentity) {
+						this.client = new AzureOpenAI({
+							baseURL: this.options.openAiBaseUrl,
+							azureADTokenProvider: getBearerTokenProvider(
+								new DefaultAzureCredential(),
+								"https://cognitiveservices.azure.com/.default",
+							),
+							apiVersion: this.options.azureApiVersion || azureOpenAiDefaultApiVersion,
+							defaultHeaders: this.options.openAiHeaders,
+						})
+					} else {
+						this.client = new AzureOpenAI({
+							baseURL: this.options.openAiBaseUrl,
+							apiKey: this.options.openAiApiKey,
+							apiVersion: this.options.azureApiVersion || azureOpenAiDefaultApiVersion,
+							defaultHeaders: this.options.openAiHeaders,
+						})
+					}
 				} else {
 					this.client = new OpenAI({
 						baseURL: this.options.openAiBaseUrl,

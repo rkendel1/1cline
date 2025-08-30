@@ -86,6 +86,7 @@ export interface ApiHandlerOptions {
 	doubaoApiKey?: string
 	mistralApiKey?: string
 	azureApiVersion?: string
+	azureIdentity?: boolean
 	qwenApiLine?: string
 	moonshotApiLine?: string
 	moonshotApiKey?: string
