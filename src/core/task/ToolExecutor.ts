@@ -4,6 +4,7 @@ import { ClineIgnoreController } from "@core/ignore/ClineIgnoreController"
 import { DiffViewProvider } from "@integrations/editor/DiffViewProvider"
 import { BrowserSession } from "@services/browser/BrowserSession"
 import { UrlContentFetcher } from "@services/browser/UrlContentFetcher"
+import laminarService from "@services/laminar/LaminarService"
 import { McpHub } from "@services/mcp/McpHub"
 import { AutoApprovalSettings } from "@shared/AutoApprovalSettings"
 import { BrowserSettings } from "@shared/BrowserSettings"
@@ -352,7 +353,13 @@ export class ToolExecutor {
 	 */
 	private async handleCompleteBlock(block: ToolUse, config: any): Promise<void> {
 		// All tools are now fully self-managed and implement IPartialBlockHandler
+		laminarService.startSpan("tool", {
+			name: block.name,
+			spanType: "TOOL",
+			input: block,
+		})
 		const result = await this.coordinator.execute(config, block)
+		laminarService.endSpan("tool")
 
 		await this.saveCheckpoint()
 		this.pushToolResult(result, block)
