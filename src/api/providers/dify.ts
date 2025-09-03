@@ -4,13 +4,11 @@ import { ApiHandler } from "../../core/api/index"
 import { ApiStream } from "../../core/api/transform/stream"
 
 export class DifyHandler implements ApiHandler {
-	private options: ApiHandlerOptions
 	private baseUrl: string
 	private apiKey: string
 	private conversationId: string | null = null
 
 	constructor(options: ApiHandlerOptions) {
-		this.options = options
 		this.apiKey = options.difyApiKey || ""
 		this.baseUrl = options.difyBaseUrl || ""
 
@@ -59,7 +57,7 @@ export class DifyHandler implements ApiHandler {
 				},
 				body: JSON.stringify(requestBody),
 			})
-		} catch (error: any) {
+		} catch (error) {
 			console.error("[DIFY DEBUG] Network error during fetch:", error)
 			// Log more detailed error information if available (e.g., from undici)
 			const cause = error.cause ? ` | Cause: ${error.cause}` : ""
@@ -236,7 +234,7 @@ export class DifyHandler implements ApiHandler {
 								console.error("[DIFY DEBUG] Direct JSON Error event:", parsed)
 								throw new Error(`Dify API error: ${parsed.message || "Unknown error"}`)
 							}
-						} catch (e) {
+						} catch (_e) {
 							// Not JSON, continue
 							console.log("[DIFY DEBUG] Line is not direct JSON, continuing")
 						}
