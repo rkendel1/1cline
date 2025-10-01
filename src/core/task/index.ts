@@ -49,7 +49,14 @@ import { ApiConfiguration } from "@shared/api"
 import { findLast, findLastIndex } from "@shared/array"
 import { combineApiRequests } from "@shared/combineApiRequests"
 import { combineCommandSequences } from "@shared/combineCommandSequences"
-import { ClineApiReqCancelReason, ClineApiReqInfo, ClineAsk, ClineMessage, ClineSay } from "@shared/ExtensionMessage"
+import {
+	ClineApiReqCancelReason,
+	ClineApiReqInfo,
+	ClineAsk,
+	ClineMessage,
+	ClineSay,
+	COMMAND_CANCEL_TOKEN,
+} from "@shared/ExtensionMessage"
 import { HistoryItem } from "@shared/HistoryItem"
 import { DEFAULT_LANGUAGE_SETTINGS, getLanguageKey, LanguageDisplay } from "@shared/Languages"
 import { convertClineMessageToProto } from "@shared/proto-conversions/cline-message"
@@ -1058,6 +1065,7 @@ export class Task {
 
 		let userFeedback: { text?: string; images?: string[]; files?: string[] } | undefined
 		let didContinue = false
+		let didCancelViaUi = false
 
 		// Chunked terminal output buffering
 		const CHUNK_LINE_COUNT = 20
@@ -1099,14 +1107,27 @@ export class Task {
 					if (text || (images && images.length > 0) || (files && files.length > 0)) {
 						userFeedback = { text, images, files }
 					}
+				} else if (response === "noButtonClicked" && text === COMMAND_CANCEL_TOKEN) {
+					telemetryService.captureTerminalUserIntervention(TerminalUserInterventionAction.CANCELLED)
+					didCancelViaUi = true
+					userFeedback = undefined
 				} else {
 					userFeedback = { text, images, files }
 				}
 				didContinue = true
 				process.continue()
 
+				if (didCancelViaUi) {
+					outputBuffer = []
+					outputBufferSize = 0
+					await this.say(
+						"command_output",
+						"Command cancelled. It will keep running in the terminal if you want to monitor it manually.",
+					)
+				}
+
 				// If more output accumulated, flush again
-				if (outputBuffer.length > 0) {
+				if (!didCancelViaUi && outputBuffer.length > 0) {
 					await flushBuffer()
 				}
 			} catch {
@@ -1131,6 +1152,9 @@ export class Task {
 
 		const outputLines: string[] = []
 		process.on("line", async (line) => {
+			if (didCancelViaUi) {
+				return
+			}
 			outputLines.push(line)
 
 			if (!didContinue) {
@@ -1182,21 +1206,50 @@ export class Task {
 
 		//await process
 
-		if (timeoutSeconds) {
-			const timeoutPromise = new Promise<never>((_, reject) => {
-				setTimeout(() => {
-					reject(new Error("COMMAND_TIMEOUT"))
-				}, timeoutSeconds * 1000)
-			})
+		if (!didCancelViaUi) {
+			if (!didCancelViaUi) {
+				if (timeoutSeconds) {
+					const timeoutPromise = new Promise<never>((_, reject) => {
+						setTimeout(() => {
+							reject(new Error("COMMAND_TIMEOUT"))
+						}, timeoutSeconds * 1000)
+					})
 
-			try {
-				await Promise.race([process, timeoutPromise])
-			} catch (error) {
-				// This will continue running the command in the background
-				didContinue = true
-				process.continue()
+					try {
+						await Promise.race([process, timeoutPromise])
+					} catch (error) {
+						// This will continue running the command in the background
+						didContinue = true
+						process.continue()
 
-				// Clear all our timers
+						// Clear all our timers
+						if (chunkTimer) {
+							clearTimeout(chunkTimer)
+							chunkTimer = null
+						}
+						if (completionTimer) {
+							clearTimeout(completionTimer)
+							completionTimer = null
+						}
+
+						// Process any output we captured before timeout
+						await setTimeoutPromise(50)
+						const result = this.terminalManager.processOutput(outputLines)
+
+						if (error.message === "COMMAND_TIMEOUT") {
+							return [
+								false,
+								`Command execution timed out after ${timeoutSeconds} seconds. The command may still be running in the terminal.${result.length > 0 ? `\nOutput so far:\n${result}` : ""}`,
+							]
+						}
+
+						// Re-throw other errors
+						throw error
+					}
+				} else {
+					await process
+				}
+			} else {
 				if (chunkTimer) {
 					clearTimeout(chunkTimer)
 					chunkTimer = null
@@ -1205,23 +1258,7 @@ export class Task {
 					clearTimeout(completionTimer)
 					completionTimer = null
 				}
-
-				// Process any output we captured before timeout
-				await setTimeoutPromise(50)
-				const result = this.terminalManager.processOutput(outputLines)
-
-				if (error.message === "COMMAND_TIMEOUT") {
-					return [
-						false,
-						`Command execution timed out after ${timeoutSeconds} seconds. The command may still be running in the terminal.${result.length > 0 ? `\nOutput so far:\n${result}` : ""}`,
-					]
-				}
-
-				// Re-throw other errors
-				throw error
 			}
-		} else {
-			await process
 		}
 
 		// Clear timer if process completes normally
@@ -1235,9 +1272,22 @@ export class Task {
 		// for their associated messages to be sent to the webview, maintaining
 		// the correct order of messages (although the webview is smart about
 		// grouping command_output messages despite any gaps anyways)
-		await setTimeoutPromise(50)
+		if (!didCancelViaUi) {
+			await setTimeoutPromise(50)
+		}
 
 		const result = this.terminalManager.processOutput(outputLines)
+
+		if (didCancelViaUi) {
+			return [
+				true,
+				formatResponse.toolResult(
+					`Command cancelled. It will continue running in the terminal.${
+						result.length > 0 ? `\nOutput captured before cancellation:\n${result}` : ""
+					}`,
+				),
+			]
+		}
 
 		if (userFeedback) {
 			await this.say("user_feedback", userFeedback.text, userFeedback.images, userFeedback.files)
