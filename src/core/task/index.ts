@@ -183,12 +183,33 @@ export class Task {
 		this.cancelTask = cancelTask
 		this.clineIgnoreController = new ClineIgnoreController(cwd)
 
+		let overrideTerminalManager: TerminalManager | undefined
+		if (process.env.CLINE_DEV_USE_STANDALONE_TERMINAL === "true") {
+			try {
+				const modulePath = path.join(__dirname, "../standalone/runtime-files/vscode/enhanced-terminal.js")
+				// eslint-disable-next-line @typescript-eslint/no-var-requires
+				const { StandaloneTerminalManager } = require(modulePath) as {
+					StandaloneTerminalManager?: new () => TerminalManager
+				}
+				if (StandaloneTerminalManager) {
+					console.log("[DEBUG] Using standalone terminal manager via env override")
+					overrideTerminalManager = new StandaloneTerminalManager()
+				} else {
+					console.warn("[DEBUG] Standalone terminal manager module missing StandaloneTerminalManager export")
+				}
+			} catch (error) {
+				console.error("[DEBUG] Failed to load standalone terminal manager via env override", error)
+			}
+		}
+
 		// TODO(ae) this is a hack to replace the terminal manager for standalone,
 		// until we have proper host bridge support for terminal execution. The
 		// standaloneTerminalManager is defined in the vscode-impls and injected
 		// during compilation of the standalone manager only, so this variable only
 		// exists in that case
-		if ((global as any).standaloneTerminalManager) {
+		if (overrideTerminalManager) {
+			this.terminalManager = overrideTerminalManager
+		} else if ((global as any).standaloneTerminalManager) {
 			console.log("[DEBUG] Using vscode-impls.js terminal manager")
 			this.terminalManager = (global as any).standaloneTerminalManager
 		} else {
