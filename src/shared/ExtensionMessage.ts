@@ -57,6 +57,7 @@ export interface ExtensionState {
 	terminalReuseEnabled?: boolean
 	terminalOutputLineLimit: number
 	defaultTerminalProfile?: string
+	vscodeTerminalExecutionMode?: "vscodeTerminal" | "backgroundExec"
 	userInfo?: UserInfo
 	version: string
 	distinctId: string
