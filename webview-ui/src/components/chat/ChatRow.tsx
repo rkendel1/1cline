@@ -9,7 +9,7 @@ import {
 	COMPLETION_RESULT_CHANGES_FLAG,
 } from "@shared/ExtensionMessage"
 import { Int64Request, StringRequest } from "@shared/proto/cline/common"
-import { VSCodeBadge, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeBadge, VSCodeButton, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import deepEqual from "fast-deep-equal"
 import React, { MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
@@ -61,6 +61,7 @@ interface ChatRowProps {
 	inputValue?: string
 	sendMessageFromChatRow?: (text: string, images: string[], files: string[]) => void
 	onSetQuote: (text: string) => void
+	onCancelCommand?: () => void
 }
 
 interface QuoteButtonState {
@@ -147,8 +148,10 @@ export const ChatRowContent = memo(
 		inputValue,
 		sendMessageFromChatRow,
 		onSetQuote,
+		onCancelCommand,
 	}: ChatRowContentProps) => {
-		const { mcpServers, mcpMarketplaceCatalog, onRelinquishControl } = useExtensionState()
+		const { mcpServers, mcpMarketplaceCatalog, onRelinquishControl, vscodeTerminalExecutionMode, backgroundCommandRunning } =
+			useExtensionState()
 		const [seeNewChangesDisabled, setSeeNewChangesDisabled] = useState(false)
 		const [quoteButtonState, setQuoteButtonState] = useState<QuoteButtonState>({
 			visible: false,
@@ -171,10 +174,23 @@ export const ChatRowContent = memo(
 				? lastModifiedMessage?.text
 				: undefined
 
-		const isCommandExecuting =
-			isLast &&
-			(lastModifiedMessage?.ask === "command" || lastModifiedMessage?.say === "command") &&
-			lastModifiedMessage?.text?.includes(COMMAND_OUTPUT_STRING)
+		const isCommandMessage = message.ask === "command" || message.say === "command"
+		const isCommandExecuting = isCommandMessage && backgroundCommandRunning
+
+		if (isCommandMessage) {
+			console.log(
+				"[ChatRow] command render state",
+				JSON.stringify({
+					messageTs: message.ts,
+					isLast,
+					backgroundCommandRunning,
+					partial: message.partial,
+					type: message.type,
+					vscodeTerminalExecutionMode,
+					showButton: isCommandExecuting && vscodeTerminalExecutionMode === "backgroundExec",
+				}),
+			)
+		}
 
 		const isMcpServerResponding = isLast && lastModifiedMessage?.say === "mcp_server_request_started"
 
@@ -768,13 +784,29 @@ export const ChatRowContent = memo(
 
 			const requestsApproval = rawCommand.endsWith(COMMAND_REQ_APP_STRING)
 			const command = requestsApproval ? rawCommand.slice(0, -COMMAND_REQ_APP_STRING.length) : rawCommand
+			const showInlineCancel =
+				vscodeTerminalExecutionMode === "backgroundExec" && isCommandExecuting && typeof onCancelCommand === "function"
 
-			return (
-				<>
-					<div style={headerStyle}>
+			const commandHeader = (
+				<div style={showInlineCancel ? { ...headerStyle, justifyContent: "space-between" } : headerStyle}>
+					<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
 						{icon}
 						{title}
 					</div>
+					{showInlineCancel && (
+						<VSCodeButton
+							appearance="secondary"
+							onClick={() => onCancelCommand?.()}
+							style={{ padding: "0 8px", height: 22, minWidth: "unset" }}>
+							Cancel
+						</VSCodeButton>
+					)}
+				</div>
+			)
+
+			return (
+				<>
+					{commandHeader}
 					<div
 						style={{
 							borderRadius: 3,

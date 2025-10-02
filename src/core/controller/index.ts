@@ -63,6 +63,8 @@ export class Controller {
 
 	// NEW: Add workspace manager (optional initially)
 	private workspaceManager?: WorkspaceRootManager
+	private backgroundCommandRunning = false
+	private backgroundCommandTaskId?: string
 
 	constructor(readonly context: vscode.ExtensionContext) {
 		PromptRegistry.getInstance() // Ensure prompts and tools are registered
@@ -325,6 +327,7 @@ export class Controller {
 
 	async cancelTask() {
 		if (this.task) {
+			this.updateBackgroundCommandState(false)
 			const { historyItem } = await this.getTaskWithId(this.task.taskId)
 			try {
 				await this.task.abortTask()
@@ -350,6 +353,27 @@ export class Controller {
 			await this.initTask(undefined, undefined, undefined, historyItem) // clears task again, so we need to abortTask manually above
 			// Dont send the state to the webview, the new Cline instance will send state when it's ready.
 			// Sending the state here sent an empty messages array to webview leading to virtuoso having to reload the entire list
+		}
+	}
+
+	updateBackgroundCommandState(running: boolean, taskId?: string) {
+		const nextTaskId = running ? taskId : undefined
+		if (this.backgroundCommandRunning === running && this.backgroundCommandTaskId === nextTaskId) {
+			return
+		}
+		console.log(
+			"[Controller] updateBackgroundCommandState",
+			JSON.stringify({ running, taskId, previousTaskId: this.backgroundCommandTaskId }),
+		)
+		this.backgroundCommandRunning = running
+		this.backgroundCommandTaskId = nextTaskId
+		void this.postStateToWebview()
+	}
+
+	async cancelBackgroundCommand(): Promise<void> {
+		const didCancel = await this.task?.cancelBackgroundCommand()
+		if (!didCancel) {
+			this.updateBackgroundCommandState(false)
 		}
 	}
 
@@ -791,6 +815,8 @@ export class Controller {
 			shouldShowAnnouncement,
 			favoritedModelIds,
 			autoCondenseThreshold,
+			backgroundCommandRunning: this.backgroundCommandRunning,
+			backgroundCommandTaskId: this.backgroundCommandTaskId,
 			// NEW: Add workspace information
 			workspaceRoots: this.workspaceManager?.getRoots() ?? [],
 			primaryRootIndex: this.workspaceManager?.getPrimaryIndex() ?? 0,

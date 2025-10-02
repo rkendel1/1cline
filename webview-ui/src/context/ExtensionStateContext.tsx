@@ -212,6 +212,8 @@ export const ExtensionStateContextProvider: React.FC<{
 		favoritedModelIds: [],
 		lastDismissedInfoBannerVersion: 0,
 		lastDismissedModelBannerVersion: 0,
+		backgroundCommandRunning: false,
+		backgroundCommandTaskId: undefined,
 
 		// NEW: Add workspace information with defaults
 		workspaceRoots: [],

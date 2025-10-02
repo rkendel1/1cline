@@ -40,6 +40,7 @@ import { formatContentBlockToMarkdown } from "@integrations/misc/export-markdown
 import { processFilesIntoText } from "@integrations/misc/extract-text"
 import { showSystemNotification } from "@integrations/notifications"
 import { TerminalManager } from "@integrations/terminal/TerminalManager"
+import { TerminalProcessResultPromise } from "@integrations/terminal/TerminalProcess"
 import { BrowserSession } from "@services/browser/BrowserSession"
 import { UrlContentFetcher } from "@services/browser/UrlContentFetcher"
 import { listFiles } from "@services/glob/list-files"
@@ -138,6 +139,14 @@ export class Task {
 	private clineIgnoreController: ClineIgnoreController
 	private toolExecutor: ToolExecutor
 
+	private terminalExecutionMode: "vscodeTerminal" | "backgroundExec"
+	private activeBackgroundCommand?: {
+		process: TerminalProcessResultPromise & {
+			terminate?: () => void
+		}
+		command: string
+	}
+
 	// Metadata tracking
 	private fileContextTracker: FileContextTracker
 	private modelContextTracker: ModelContextTracker
@@ -198,6 +207,7 @@ export class Task {
 		// during compilation of the standalone manager only, so this variable only
 		// exists in that case
 		const terminalExecutionMode = vscodeTerminalExecutionMode ?? "vscodeTerminal"
+		this.terminalExecutionMode = terminalExecutionMode
 
 		if (terminalExecutionMode === "backgroundExec") {
 			try {
@@ -1063,6 +1073,33 @@ export class Task {
 		terminalInfo.terminal.show() // weird visual bug when creating new terminals (even manually) where there's an empty space at the top.
 		const process = this.terminalManager.runCommand(terminalInfo, command)
 
+		if (this.terminalExecutionMode === "backgroundExec") {
+			this.activeBackgroundCommand = { process: process as any, command }
+			console.log(`[Task] Background command started`, JSON.stringify({ taskId: this.taskId, command }))
+			this.controller.updateBackgroundCommandState(true, this.taskId)
+			const clearBackgroundCommand = () => {
+				if (this.activeBackgroundCommand?.process !== process) {
+					return
+				}
+				this.activeBackgroundCommand = undefined
+				console.log(`[Task] Background command cleared`, JSON.stringify({ taskId: this.taskId }))
+				this.controller.updateBackgroundCommandState(false, this.taskId)
+			}
+			const processEmitter = process as unknown as {
+				on?: (event: string, listener: (...args: any[]) => void) => void
+				once?: (event: string, listener: (...args: any[]) => void) => void
+				finally?: (listener: () => void) => Promise<void>
+			}
+			processEmitter.once?.("completed", clearBackgroundCommand)
+			processEmitter.once?.("error", clearBackgroundCommand)
+			const processFinally = (process as Promise<void>).finally?.(() => {
+				clearBackgroundCommand()
+			})
+			processFinally?.catch(() => {
+				clearBackgroundCommand()
+			})
+		}
+
 		let userFeedback: { text?: string; images?: string[]; files?: string[] } | undefined
 		let didContinue = false
 		let didCancelViaUi = false
@@ -1319,6 +1356,37 @@ export class Task {
 				}\n\nYou will be updated on the terminal status and new output in the future.`,
 			]
 		}
+	}
+
+	public async cancelBackgroundCommand(): Promise<boolean> {
+		if (this.terminalExecutionMode !== "backgroundExec") {
+			return false
+		}
+		if (!this.activeBackgroundCommand) {
+			return false
+		}
+		const { process } = this.activeBackgroundCommand
+		this.activeBackgroundCommand = undefined
+		this.controller.updateBackgroundCommandState(false, this.taskId)
+		try {
+			if (typeof (process as any).terminate === "function") {
+				;(process as any).terminate()
+			} else {
+				;(process as any).continue?.()
+			}
+		} catch (error) {
+			Logger.error("Failed to terminate background command", error)
+		}
+		try {
+			console.log(
+				`[Task] Background command cancelled via API`,
+				JSON.stringify({ taskId: this.taskId, command: this.activeBackgroundCommand?.command }),
+			)
+			await this.say("command_output", "Command cancelled. Background execution has been terminated.")
+		} catch (error) {
+			Logger.error("Failed to notify command cancellation", error)
+		}
+		return true
 	}
 
 	/**
