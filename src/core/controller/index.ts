@@ -127,6 +127,7 @@ export class Controller {
 		try {
 			// TODO: update to clineAccountId and then move clineApiKey to a clear function.
 			this.stateManager.setSecret("clineAccountId", undefined)
+			this.stateManager.setSecret("cline:clineAccountId", undefined)
 			this.stateManager.setGlobalState("userInfo", undefined)
 
 			// Update API providers through cache service
