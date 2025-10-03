@@ -1,10 +1,17 @@
 # Changelog
 
+## 3.32.7
+
+### Patch Changes
+
+- 3fa4106: Added checkpoints warning when users start a multiroot task
+- 9b6a120: Added markdown support to focus chain text, allowing the model to display more interesting focus chains
+
 ## [3.32.6]
 
 - Add experimental support for VSCode multi root workspaces
 - Add Claude Sonnet 4.5 to Claude Code provider
-- Add Glm 4.6 to Z AI provider 
+- Add Glm 4.6 to Z AI provider
 
 ## [3.32.5]
 
