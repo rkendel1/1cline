@@ -142,7 +142,7 @@ export class AuthService {
 					this._clineAuthInfo = updatedAuthInfo
 					this._authenticated = true
 					clineAccountAuthToken = updatedAuthInfo.idToken
-				} else if (!this._fallbackProvider || provider === this._fallbackProvider) {
+				} else if (this.shouldClearAuthInfo(provider)) {
 					this._clineAuthInfo = null
 					this._authenticated = false
 				}
@@ -156,6 +156,10 @@ export class AuthService {
 			console.error("Error getting auth token:", error)
 			return null
 		}
+	}
+
+	private shouldClearAuthInfo(provider: IAuthProvider) {
+		return !this._fallbackProvider || provider === this._fallbackProvider
 	}
 
 	protected _setProvider(providerName: string): void {
