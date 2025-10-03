@@ -233,9 +233,6 @@ export async function readGlobalStateFromDisk(context: ExtensionContext): Promis
 		const dictationSettings = context.globalState.get<GlobalStateAndSettings["dictationSettings"]>("dictationSettings") as
 			| DictationSettings
 			| undefined
-
-		const mcpMarketplaceCatalog =
-			context.globalState.get<GlobalStateAndSettings["mcpMarketplaceCatalog"]>("mcpMarketplaceCatalog")
 		const lastDismissedInfoBannerVersion =
 			context.globalState.get<GlobalStateAndSettings["lastDismissedInfoBannerVersion"]>("lastDismissedInfoBannerVersion")
 		const lastDismissedModelBannerVersion = context.globalState.get<
@@ -555,7 +552,6 @@ export async function readGlobalStateFromDisk(context: ExtensionContext): Promis
 			terminalOutputLineLimit: terminalOutputLineLimit ?? 500,
 			defaultTerminalProfile: defaultTerminalProfile ?? "default",
 			globalWorkflowToggles: globalWorkflowToggles || {},
-			mcpMarketplaceCatalog,
 			qwenCodeOauthPath,
 			customPrompt,
 			autoCondenseThreshold: autoCondenseThreshold || 0.75, // default to 0.75 if not set

@@ -38,6 +38,7 @@ import {
 	ensureMcpServersDirectoryExists,
 	ensureSettingsDirectoryExists,
 	GlobalFileNames,
+	writeMcpMarketplaceCatalogToCache,
 } from "../storage/disk"
 import { PersistenceErrorEvent, StateManager } from "../storage/StateManager"
 import { Settings } from "../storage/state-keys"
@@ -476,8 +477,8 @@ export class Controller {
 				})),
 			}
 
-			// Store in global state
-			this.stateManager.setGlobalState("mcpMarketplaceCatalog", catalog)
+			// Store in cache file
+			await writeMcpMarketplaceCatalogToCache(catalog)
 			return catalog
 		} catch (error) {
 			console.error("Failed to fetch MCP marketplace:", error)
@@ -514,8 +515,8 @@ export class Controller {
 				})),
 			}
 
-			// Store in global state
-			this.stateManager.setGlobalState("mcpMarketplaceCatalog", catalog)
+			// Store in cache file
+			await writeMcpMarketplaceCatalogToCache(catalog)
 			return catalog
 		} catch (error) {
 			console.error("Failed to fetch MCP marketplace:", error)
