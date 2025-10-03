@@ -2,8 +2,6 @@
 
 ## 3.32.7
 
-### Patch Changes
-
 - 3fa4106: Added checkpoints warning when users start a multiroot task
 - 9b6a120: Added markdown support to focus chain text, allowing the model to display more interesting focus chains
 
