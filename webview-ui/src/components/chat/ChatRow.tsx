@@ -312,16 +312,12 @@ export const ChatRowContent = memo(
 					]
 				case "command":
 					return [
-						isCommandExecuting ? (
-							<ProgressIndicator />
-						) : (
-							<span
-								className="codicon codicon-terminal"
-								style={{
-									color: normalColor,
-									marginBottom: "-1.5px",
-								}}></span>
-						),
+						<span
+							className="codicon codicon-terminal"
+							style={{
+								color: normalColor,
+								marginBottom: "-1.5px",
+							}}></span>,
 						<span style={{ color: normalColor, fontWeight: "bold" }}>Cline wants to execute this command:</span>,
 					]
 				case "use_mcp_server":
@@ -788,19 +784,9 @@ export const ChatRowContent = memo(
 				vscodeTerminalExecutionMode === "backgroundExec" && isCommandExecuting && typeof onCancelCommand === "function"
 
 			const commandHeader = (
-				<div style={showInlineCancel ? { ...headerStyle, justifyContent: "space-between" } : headerStyle}>
-					<div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-						{icon}
-						{title}
-					</div>
-					{showInlineCancel && (
-						<VSCodeButton
-							appearance="secondary"
-							onClick={() => onCancelCommand?.()}
-							style={{ padding: "0 8px", height: 22, minWidth: "unset" }}>
-							Cancel
-						</VSCodeButton>
-					)}
+				<div style={headerStyle}>
+					{icon}
+					{title}
 				</div>
 			)
 
@@ -814,6 +800,51 @@ export const ChatRowContent = memo(
 							overflow: "hidden",
 							backgroundColor: CODE_BLOCK_BG_COLOR,
 						}}>
+						{isCommandExecuting && (
+							<div
+								style={{
+									display: "flex",
+									alignItems: "center",
+									justifyContent: "space-between",
+									padding: "8px 10px",
+									backgroundColor: "rgba(0, 0, 0, 0.2)",
+									borderBottom: "1px solid var(--vscode-editorGroup-border)",
+								}}>
+								<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+									<div
+										style={{
+											width: "8px",
+											height: "8px",
+											borderRadius: "50%",
+											backgroundColor: successColor,
+											animation: "pulse 2s ease-in-out infinite",
+										}}
+									/>
+									<span style={{ color: successColor, fontWeight: 500, fontSize: "13px" }}>Running</span>
+								</div>
+								{showInlineCancel && (
+									<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+										<span
+											className="codicon codicon-link-external"
+											onClick={() => {
+												// Open terminal - you may need to implement this
+											}}
+											style={{
+												fontSize: 13,
+												color: "var(--vscode-descriptionForeground)",
+												cursor: "pointer",
+											}}
+										/>
+										<VSCodeButton
+											appearance="secondary"
+											onClick={() => onCancelCommand?.()}
+											style={{ padding: "2px 8px", height: 24, minWidth: "unset", fontSize: "12px" }}>
+											cancel
+										</VSCodeButton>
+									</div>
+								)}
+							</div>
+						)}
 						<CodeBlock forceWrap={true} source={`${"```"}shell\n${command}\n${"```"}`} />
 						{output.length > 0 && (
 							<div style={{ width: "100%" }}>
