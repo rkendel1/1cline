@@ -1194,6 +1194,7 @@ export class Task {
 			}
 			outputLines.push(line)
 
+			// Apply buffered streaming for both vscodeTerminal and backgroundExec modes
 			if (!didContinue) {
 				outputBuffer.push(line)
 				outputBufferSize += Buffer.byteLength(line, "utf8")
@@ -1204,6 +1205,8 @@ export class Task {
 					scheduleFlush()
 				}
 			} else {
+				// For backgroundExec mode, stream output directly to UI after user continues
+				// For vscodeTerminal mode, this maintains existing behavior
 				this.say("command_output", line)
 			}
 		})
