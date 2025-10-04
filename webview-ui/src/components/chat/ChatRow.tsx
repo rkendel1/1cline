@@ -9,7 +9,7 @@ import {
 	COMPLETION_RESULT_CHANGES_FLAG,
 } from "@shared/ExtensionMessage"
 import { Int64Request, StringRequest } from "@shared/proto/cline/common"
-import { VSCodeBadge, VSCodeButton, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeBadge, VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import deepEqual from "fast-deep-equal"
 import React, { MouseEvent, memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useSize } from "react-use"
@@ -823,25 +823,26 @@ export const ChatRowContent = memo(
 									<span style={{ color: successColor, fontWeight: 500, fontSize: "13px" }}>Running</span>
 								</div>
 								{showInlineCancel && (
-									<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-										<span
-											className="codicon codicon-link-external"
-											onClick={() => {
-												// Open terminal - you may need to implement this
-											}}
-											style={{
-												fontSize: 13,
-												color: "var(--vscode-descriptionForeground)",
-												cursor: "pointer",
-											}}
-										/>
-										<VSCodeButton
-											appearance="secondary"
-											onClick={() => onCancelCommand?.()}
-											style={{ padding: "2px 8px", height: 24, minWidth: "unset", fontSize: "12px" }}>
-											cancel
-										</VSCodeButton>
-									</div>
+									<button
+										onClick={() => onCancelCommand?.()}
+										onMouseEnter={(e) => {
+											e.currentTarget.style.background = "var(--vscode-button-secondaryHoverBackground)"
+										}}
+										onMouseLeave={(e) => {
+											e.currentTarget.style.background = "var(--vscode-button-secondaryBackground)"
+										}}
+										style={{
+											background: "var(--vscode-button-secondaryBackground)",
+											color: "var(--vscode-button-secondaryForeground)",
+											border: "none",
+											borderRadius: "2px",
+											padding: "4px 10px",
+											fontSize: "12px",
+											cursor: "pointer",
+											fontFamily: "inherit",
+										}}>
+										cancel
+									</button>
 								)}
 							</div>
 						)}
