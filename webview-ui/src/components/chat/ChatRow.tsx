@@ -175,7 +175,7 @@ export const ChatRowContent = memo(
 				: undefined
 
 		const isCommandMessage = message.ask === "command" || message.say === "command"
-		const isCommandExecuting = isCommandMessage && backgroundCommandRunning
+		const isCommandExecuting = isCommandMessage && backgroundCommandRunning && isLast
 
 		if (isCommandMessage) {
 			console.log(
